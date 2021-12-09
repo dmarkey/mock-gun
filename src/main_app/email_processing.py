@@ -90,3 +90,4 @@ def process_incoming_email(payload, domain):
     message.to.set(to_objects)
     message.bcc.set(bcc_objects)
     message.cc.set(cc_objects)
+    return message

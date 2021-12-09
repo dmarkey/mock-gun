@@ -67,22 +67,33 @@ class MockGunMessage(models.Model):
     id = models.AutoField(primary_key=True)
     raw_payload = models.JSONField()
 
+    def send_mock_webhooks(self):
+        for hook in self.domain.mockwebhook_set.all():
+            hook.send_for_message(self)
+
     def __str__(self):
         to = ",".join(self.to.all().values_list("address", flat=True))
         return f"{to} - {self.subject}"
 
 
-class WebhookType(models.Model):
-    name = models.CharField(primary_key=True, max_length=128)
-
-    def __str__(self):
-        return self.name
-
-
-class WebhookTarget(models.Model):
-    webhook_type = models.ForeignKey(WebhookType, on_delete=models.CASCADE)
+class MockWebhook(models.Model):
+    delay = models.IntegerField(default=1)
     url = models.URLField()
     domain = models.ForeignKey(MockGunDomain, on_delete=models.CASCADE)
+    ssl_verify = models.BooleanField(default=False)
+    webhook_type = models.CharField(max_length=128, choices=[
+        ("opened", "Opens"),
+        ("clicks", "Clicks"),
+        ("delivered", "Delivered Messages"),
+        ("failed", "Permanent Failure"),
+        ("complained", "Spam Complaint"),
+        ("failed_temporary", "Temporary Failure"),
+        ("unsubscribed", "Unsubscribed"),
+    ])
+
+    def send_for_message(self, message):
+        print(message)
+
 
     def __str__(self):
-        return f"{self.domain.name}:{self.webhook_type.name} - {self.url}"
+        return f"{self.domain.name}:{self.webhook_type} - {self.url}"
