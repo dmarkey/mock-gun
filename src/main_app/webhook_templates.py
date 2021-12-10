@@ -1,5 +1,25 @@
 import copy
+import hashlib
+import hmac
+import random
+import string
 import time
+import uuid
+from django.conf import settings
+
+
+def sign_payload(payload):
+    timestamp = payload['signature']['timestamp']
+    token = payload['signature']['token']
+    signature = hmac.new(
+        key=settings.MOCK_MAILGUN_KEY.encode(),
+        msg='{}{}'.format(
+            timestamp,
+            token).encode(),
+        digestmod=hashlib.sha256).hexdigest()
+    payload['signature']['signature'] = signature
+
+
 CLICKED = {"signature": {
     "token": "",
     "timestamp": "",
@@ -37,58 +57,60 @@ CLICKED = {"signature": {
 }
 
 DELIVERED = {"signature": {
-    "token": "000000",
-    "timestamp": "1639006661",
-    "signature": "0ff0c50cc29b76cb6a17ce54bb55ce08089050ffed08a1d4979b6212fb19551d"},
-             "event-data": {
-                 "id": "xxxx",
-                 "timestamp": 1521472262.908181,
-                 "log-level": "info",
-                 "event": "delivered",
-                 "delivery-status": {
-                     "tls": True,
-                     "mx-host": "smtp-in.example.com",
-                     "code": 250,
-                     "description": "",
-                     "session-seconds": 0.4331989288330078,
-                     "utf8": True,
-                     "attempt-no": 1,
-                     "message": "OK",
-                     "certificate-verified": True
-                 },
-                 "flags": {
-                     "is-routed": False,
-                     "is-authenticated": True,
-                     "is-system-test": False,
-                     "is-test-mode": False
-                 },
-                 "envelope": {
-                     "transport": "smtp",
-                     "sender": "bob@sandboxaf8ff5f71f0c47e5aa3302448d999835.mailgun.org",
-                     "sending-ip": "209.61.154.250",
-                     "targets": "alice@example.com"
-                 },
-                 "message": {
-                     "headers": {
-                         "to": "Alice <alice@example.com>",
-                         "message-id": "20130503182626.18666.16540@sandboxaf8ff5f71f0c47e5aa3302448d999835.mailgun.org",
-                         "from": "Bob <bob@sandboxaf8ff5f71f0c47e5aa3302448d999835.mailgun.org>",
-                         "subject": "Test delivered webhook"
-                     },
-                     "attachments": [],
-                     "size": 111
-                 },
-                 "recipient": "alice@example.com",
-                 "recipient-domain": "example.com",
-                 "storage": {
-                     "url": "https://mock-gun.api/",
-                     "key": "message_key"
-                 },
-                 "campaigns": [],
-                 "tags": [],
-                 "user-variables": {
-                 }
-             }}
+    "token": "c7986654d1ef8a7023d5aeee28a8b3d4e274b284a2e2484c4b",
+    "timestamp": "1639052591",
+    "signature": "633664b5005d3ebd1e4c41e84c15e3e8991b9ed62b15b81650b50e60dfb2e03b"},
+    "event-data": {
+        "id": "CPgfbmQMTCKtHW6uIWtuVe",
+        "timestamp": 1521472262.908181,
+        "log-level": "info",
+        "event": "delivered",
+        "delivery-status": {
+            "tls": True,
+            "mx-host": "smtp-in.example.com",
+            "code": 250,
+            "description": "",
+            "session-seconds": 0.4331989288330078,
+            "utf8": True,
+            "attempt-no": 1,
+            "message": "OK",
+            "certificate-verified": True
+        },
+        "flags": {
+            "is-routed": False,
+            "is-authenticated": True,
+            "is-system-test": False,
+            "is-test-mode": False
+        },
+        "envelope": {
+            "transport": "smtp",
+            "sender": "bob@sandboxaf8ff5f71f0c47e5aa3302448d999835.mailgun.org",
+            "sending-ip": "209.61.154.250",
+            "targets": "alice@example.com"
+        },
+        "message": {
+            "headers": {
+                "to": "Alice <alice@example.com>",
+                "message-id": "20130503182626.18666.16540@sandboxaf8ff5f71f0c47e5aa3302448d999835.mailgun.org",
+                "from": "Bob <bob@sandboxaf8ff5f71f0c47e5aa3302448d999835.mailgun.org>",
+                "subject": "Test delivered webhook"
+            },
+            "attachments": [],
+            "size": 111
+        },
+        "recipient": "alice@example.com",
+        "recipient-domain": "example.com",
+        "storage": {
+            "url": "https://se.api.mailgun.net/v3/domains/sandboxaf8ff5f71f0c47e5aa3302448d999835.mailgun.org/messages/message_key",
+            "key": "message_key"
+        },
+        "campaigns": [],
+        "tags": [],
+        "user-variables": {
+            "my_var_1": "Mailgun Variable #1",
+            "my-var-2": "awesome"
+        }
+    }}
 OPENED = {"signature": {"token": "", "timestamp": None, "signature": ""},
           "event-data": {
               "id": "XXXXXX",
@@ -287,66 +309,43 @@ UNSUBSCRIBED = {"signature": {"token": "", "timestamp": "", "signature": ""},
                 }}
 
 
-
-DELIVERED = {"signature": {
-    "token": "000000",
-    "timestamp": "1639006661",
-    "signature": "0ff0c50cc29b76cb6a17ce54bb55ce08089050ffed08a1d4979b6212fb19551d"},
-             "event-data": {
-                 "id": "xxxx",
-                 "timestamp": 1521472262.908181,
-                 "log-level": "info",
-                 "event": "delivered",
-                 "delivery-status": {
-                     "tls": True,
-                     "mx-host": "smtp-in.example.com",
-                     "code": 250,
-                     "description": "",
-                     "session-seconds": 0.4331989288330078,
-                     "utf8": True,
-                     "attempt-no": 1,
-                     "message": "OK",
-                     "certificate-verified": True
-                 },
-                 "flags": {
-                     "is-routed": False,
-                     "is-authenticated": True,
-                     "is-system-test": False,
-                     "is-test-mode": False
-                 },
-                 "envelope": {
-                     "transport": "smtp",
-                     "sender": "bob@sandboxaf8ff5f71f0c47e5aa3302448d999835.mailgun.org",
-                     "sending-ip": "209.61.154.250",
-                     "targets": "alice@example.com"
-                 },
-                 "message": {
-                     "headers": {
-                         "to": "Alice <alice@example.com>",
-                         "message-id": "20130503182626.18666.16540@sandboxaf8ff5f71f0c47e5aa3302448d999835.mailgun.org",
-                         "from": "Bob <bob@sandboxaf8ff5f71f0c47e5aa3302448d999835.mailgun.org>",
-                         "subject": "Test delivered webhook"
-                     },
-                     "attachments": [],
-                     "size": 111
-                 },
-                 "recipient": "alice@example.com",
-                 "recipient-domain": "example.com",
-                 "storage": {
-                     "url": "https://mock-gun.api/",
-                     "key": "message_key"
-                 },
-                 "campaigns": [],
-                 "tags": [],
-                 "user-variables": {
-                 }
-             }}
-
-def render_delivered(message):
+def render_delivered(message, recipient, domain):
     working_template = copy.copy(DELIVERED)
     timestamp = time.time()
-    working_template['signature']['timestamp'] = str(int(timestamp))
-    event_data = working_template['event_data']
-    
-    working_template['signature']['timestamp'] = str(int(timestamp))
+    email_address = recipient.address
+    full_email_address = recipient.display_address
+    email_address_domain = email_address.split("@")[1]
 
+    working_template['event-data']['id'] = str(uuid.uuid4())
+    working_template['event-data']['timestamp'] = timestamp
+    working_template['event-data']['user-variables'] = message.json_variables
+    working_template['event-data']['message']['headers'][
+        'from'] = message.from_field.display_address
+    working_template['event-data']['message']['headers'][
+        'to'] = full_email_address
+    working_template['event-data']['message']['headers'][
+        'subject'] = message.subject
+    working_template['event-data']['message']['headers']['message-id'] = str(
+        message.pk)
+    working_template['event-data']['message']['headers']['size'] = 100
+    working_template['event-data']['recipient'] = email_address
+    working_template['event-data']['recipient-domain'] = email_address_domain
+    working_template['event-data']['storage'][
+        'url'] = f"http://localhost/v3/domains/{domain.name}/messages/{message.pk}"
+    working_template['event-data']['storage']['key'] = message.pk
+    working_template['event-data']['envelope']['sending-ip'] = "1.1.1.1"
+    working_template['event-data']['envelope']['targets'] = email_address
+    working_template['event-data']['envelope']['targets'] = email_address
+    working_template['event-data']['id'] = str(uuid.uuid4())
+    working_template['event-data']['envelope'][
+        'sender'] = message.from_field.address
+    working_template['signature']['timestamp'] = str(int(timestamp))
+    working_template['signature']['token'] = ''.join(
+        random.choices(string.ascii_letters
+                       + string.digits, k=50))
+    return working_template
+
+
+WEBHOOKS = {
+    "delivered": render_delivered
+}

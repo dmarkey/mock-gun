@@ -60,7 +60,11 @@ class MockGunMessageViewset(viewsets.ViewSet):
 
         processed_payload = {x[0].lower(): x[1]
                              for x in self.request.POST.lists()}
-        message = process_incoming_email(processed_payload, domain)
+        json_variables = {x[0][2:]: x[1][0]
+                          for x in self.request.POST.lists()
+                          if x[0].startswith("v")}
+        message = process_incoming_email(processed_payload,
+                                         domain, json_variables)
         message.send_mock_webhooks()
         return JsonResponse({
             "message": "Queued. Thank you.",

@@ -1,8 +1,9 @@
 import random
 import string
+import uuid
 
 from django.db import models
-
+from main_app.webhook_templates import WEBHOOKS
 
 # Create your models here.
 
@@ -38,6 +39,7 @@ class MockGunDomain(models.Model):
 
 class EmailAddress(models.Model):
     address = models.CharField(primary_key=True, max_length=1024)
+    display_address = models.CharField(max_length=1024)
 
     def __str__(self):
         return self.address
@@ -64,8 +66,9 @@ class MockGunMessage(models.Model):
     template = models.ForeignKey(Template, null=True,
                                  on_delete=models.CASCADE, blank=True)
     domain = models.ForeignKey(MockGunDomain, on_delete=models.CASCADE)
-    id = models.AutoField(primary_key=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     raw_payload = models.JSONField()
+    json_variables = models.JSONField()
 
     def send_mock_webhooks(self):
         for hook in self.domain.mockwebhook_set.all():
@@ -92,8 +95,8 @@ class MockWebhook(models.Model):
     ])
 
     def send_for_message(self, message):
-        print(message)
-
+        for to in message.to.all():
+            WEBHOOKS[self.webhook_type](message, to, message.domain)
 
     def __str__(self):
         return f"{self.domain.name}:{self.webhook_type} - {self.url}"

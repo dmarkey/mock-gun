@@ -14,7 +14,20 @@ def validate_all_emails(emails):
             raise ValidationError({"message": f"{x} is not a valid email"})
 
 
-def process_incoming_email(payload, domain):
+def process_addresses(addresses):
+    output = []
+
+    for full_address in addresses:
+        address = email.utils.parseaddr(full_address)[1]
+        address_obj = EmailAddress.objects.get_or_create(
+            address=address)[0]
+        address_obj.display_address = full_address
+        address_obj.save()
+        output.append(address_obj)
+    return output
+
+
+def process_incoming_email(payload, domain, json_variables):
     text = payload.get("text")
     html = payload.get("html")
     tag = payload.get("tag")
@@ -50,14 +63,14 @@ def process_incoming_email(payload, domain):
     all_emails = (to + bcc + cc + [from_field])
 
     validate_all_emails(all_emails)
-    from_addr = EmailAddress.objects.get_or_create(
-        address=email.utils.parseaddr(from_field)[1])[0]
-    to_objects = [EmailAddress.objects.get_or_create(
-        address=email.utils.parseaddr(x)[1])[0] for x in to_field]
-    cc_objects = [EmailAddress.objects.get_or_create(
-        address=email.utils.parseaddr(x)[1])[0] for x in cc]
-    bcc_objects = [EmailAddress.objects.get_or_create(
-        address=email.utils.parseaddr(x)[1])[0] for x in bcc]
+    from_addr = process_addresses([to])[0]
+    from_addr.display_address = from_field
+    to_objects = process_addresses(to_field)
+    cc_objects = process_addresses(cc)
+    bcc_objects = process_addresses(bcc)
+    if not json_variables:
+        json_variables = {}
+
     if not text:
         text = ""
     else:
@@ -81,6 +94,7 @@ def process_incoming_email(payload, domain):
     message.html = html
     message.raw_payload = payload
     message.text = text
+    message.json_variables = json_variables
     message.subject = subject
     message.domain = domain
     message.tag = tag
