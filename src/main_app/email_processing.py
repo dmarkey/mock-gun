@@ -8,9 +8,16 @@ from main_app.models import EmailAddress, MockGunMessage, Template
 def validate_all_emails(emails):
     for x in emails:
         email_address = email.utils.parseaddr(x)[1]
-        if validate_email(email_address, check_format=True,
-                          check_blacklist=False,
-                          check_dns=False, check_smtp=False) is not True:
+        if (
+            validate_email(
+                email_address,
+                check_format=True,
+                check_blacklist=False,
+                check_dns=False,
+                check_smtp=False,
+            )
+            is not True
+        ):
             raise ValidationError({"message": f"{x} is not a valid email"})
 
 
@@ -19,8 +26,7 @@ def process_addresses(addresses):
 
     for full_address in addresses:
         address = email.utils.parseaddr(full_address)[1]
-        address_obj = EmailAddress.objects.get_or_create(
-            address=address)[0]
+        address_obj = EmailAddress.objects.get_or_create(address=address)[0]
         address_obj.display_address = full_address
         address_obj.save()
         output.append(address_obj)
@@ -39,15 +45,18 @@ def process_incoming_email(payload, domain, json_variables):
             template_obj = Template.objects.filter(name=template)[0]
         except IndexError:
             raise ValidationError(
-                {"message":
-                     f"template {template} does not exist *WARNING* "
-                     f"Mailgun does not give this error in their API,"
-                     f" it fails silently."})
+                {
+                    "message": f"template {template} does not exist *WARNING* "
+                    f"Mailgun does not give this error in their API,"
+                    f" it fails silently."
+                }
+            )
 
     subject = payload.get("subject")
     if not text and not html:
-        raise ValidationError({"message": "Need at least one of 'text'"
-                                          " or 'html' parameters specified"})
+        raise ValidationError(
+            {"message": "Need at least one of 'text'" " or 'html' parameters specified"}
+        )
     to_field = payload.get("to")
     from_field = payload.get("from")
     if from_field is None:
@@ -55,12 +64,12 @@ def process_incoming_email(payload, domain, json_variables):
     if to_field is None:
         raise ValidationError({"message": "to parameter is missing"})
 
-    to = payload['to']
+    to = payload["to"]
     bcc = payload.get("bcc", [])
     cc = payload.get("cc", [])
     from_field = payload.get("from")[0]
 
-    all_emails = (to + bcc + cc + [from_field])
+    all_emails = to + bcc + cc + [from_field]
 
     validate_all_emails(all_emails)
     from_addr = process_addresses([to])[0]
