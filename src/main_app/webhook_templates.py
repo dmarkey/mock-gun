@@ -298,6 +298,7 @@ def render(template, message, recipient, domain):
     working_template["signature"]["token"] = "".join(
         random.choices(string.ascii_letters + string.digits, k=50)
     )
+    sign_payload(working_template)
     return working_template
 
 

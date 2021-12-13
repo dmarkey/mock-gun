@@ -13,51 +13,21 @@ from main_app.models import MockGunDomain, MockGunMessage, Template, TemplateVer
 from django.core.management import call_command
 
 
-class MockGunDomainSerializer(serializers.HyperlinkedModelSerializer):
-    spam_action = serializers.SerializerMethodField()
-    id = serializers.SerializerMethodField()
-    created_at = serializers.SerializerMethodField()
-
-    def get_spam_action(self, obj):
-        return "disabled"
-
-    def get_created_at(self, obj):
-        return obj.created_at.strftime("%a, %d %b %Y %T UTC")
-
-    def get_id(self, obj):
-        return obj.internal_id
-
-    class Meta:
-        model = MockGunDomain
-        fields = [
-            "id",
-            "created_at",
-            "name",
-            "require_tls",
-            "skip_verification",
-            "smtp_login",
-            "spam_action",
-            "state",
-            "type",
-            "web_prefix",
-            "web_scheme",
-            "wildcard",
-        ]
-
-
 class MockGunMessageSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = MockGunMessage
         fields = ["id"]
 
 
-class MockGunDomainViewset(viewsets.ModelViewSet):
-    """
-    API endpoint that allows groups to be viewed or edited.
-    """
+class MockGunDomainViewset(viewsets.ViewSet):
 
-    queryset = MockGunDomain.objects.all()
-    serializer_class = MockGunDomainSerializer
+    def list(self, request, *args, **kwargs):
+        domains = list(MockGunDomain.objects.all().values("created_at", "internal_id", "is_disabled", "name", "require_tls", "skip_verification", "smtp_login", "state", "type", "web_prefix", "web_scheme", "wildcard").values())
+        for domain in domains:
+            domain['id'] = domain.pop("internal_id")
+            domain['created_at'] = domain.pop("created_at").strftime("%a, %d %b %Y %T UTC")
+
+        return JsonResponse({"total_count": len(domains), "items": domains})
 
 
 # Create your views here.

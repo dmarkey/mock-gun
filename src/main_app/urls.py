@@ -7,13 +7,15 @@ from main_app.views import (
     MockGunEmailValidateView,
     DataImportExportView,
     TemplatesView,
-    TemplateVersionsView,
+    TemplateVersionsView, MockGunDomainViewset,
 )
 
-router = routers.DefaultRouter(trailing_slash=False)
-router.register(r"domains", views.MockGunDomainViewset)
+#router = routers.DefaultRouter(trailing_slash=False)
+#router.register(r"domains", views.MockGunDomainViewset)
 
 urlpatterns = [
+
+    path("v3/domains", MockGunDomainViewset.as_view({"get": "list"})),
     path("v3/<str:domain>/messages", MockGunMessageViewset.as_view({"post": "create"})),
     path(
         "v3/<str:domain>/templates",
@@ -31,7 +33,7 @@ urlpatterns = [
         "v3/<str:domain>/templates/<str:template_name>",
         TemplatesView.as_view({"get": "get"}),
     ),
-    path("v3/", include(router.urls)),
+    #path("v3/", include(router.urls)),
     path(
         "v4/address/validate",
         MockGunEmailValidateView.as_view({"post": "create", "get": "create"}),
