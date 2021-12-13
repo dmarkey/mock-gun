@@ -39,8 +39,9 @@ def auth_middleware(get_response):
             or check_incoming_key(auth_header)
             or request.path.startswith("/admin")
         ):
+            print(f"REQUEST:{request.build_absolute_uri()}")
             resp = get_response(request)
-            print(resp.content)
+            print(f"RESPONSE:{resp.content}")
             return resp
 
         return JsonResponse({"message": "Invalid private key"})

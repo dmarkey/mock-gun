@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.db.models import JSONField
 
+from django.contrib.auth.models import Group, User
+
 from main_app.models import (
     EmailAddress,
     Template,
@@ -17,6 +19,8 @@ admin.site.register(Template)
 admin.site.register(TemplateVersion)
 admin.site.register(MockGunDomain)
 admin.site.register(MockWebhook)
+admin.site.unregister(Group)
+admin.site.unregister(User)
 
 
 @admin.register(MockGunMessage)

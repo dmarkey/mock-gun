@@ -16,6 +16,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from main_app.urls import urlpatterns
+admin.site.site_header = 'Mockgun Administration'
 
 urlpatterns = [
     path("admin/", admin.site.urls),
