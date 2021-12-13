@@ -53,7 +53,7 @@ def process_incoming_email(payload, domain, json_variables):
             )
 
     subject = payload.get("subject")
-    if not text and not html:
+    if not text and not html and not template_obj:
         raise ValidationError(
             {"message": "Need at least one of 'text'" " or 'html' parameters specified"}
         )

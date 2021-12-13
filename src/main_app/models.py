@@ -75,6 +75,9 @@ class Template(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     domain = models.ForeignKey(MockGunDomain, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return f"{self.domain.name} - {self.name}"
+
     class Meta:
         ordering = ["created_at"]
 
@@ -90,6 +93,9 @@ class TemplateVersion(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.template}:{self.version}"
 
 
 class MockGunMessage(models.Model):

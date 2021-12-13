@@ -1,4 +1,4 @@
 #!/bin/sh
 rm db.sqlite3 || true
-python manage.py migrate
+python3 manage.py migrate
 

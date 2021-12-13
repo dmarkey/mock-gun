@@ -272,7 +272,9 @@ def render(template, message, recipient, domain):
     ] = message.from_field.display_address
     working_template["event-data"]["message"]["headers"]["to"] = full_email_address
     working_template["event-data"]["message"]["headers"]["subject"] = message.subject
-    working_template["event-data"]["message"]["headers"]["message-id"] = str(message.pk)
+    working_template["event-data"]["message"]["headers"]["message-id"] = (
+        str(message.pk) + "@" + domain.name
+    )
     working_template["event-data"]["message"]["headers"]["size"] = 100
     working_template["event-data"]["recipient"] = email_address
     working_template["event-data"]["recipient-domain"] = email_address_domain

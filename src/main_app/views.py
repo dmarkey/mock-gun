@@ -20,12 +20,58 @@ class MockGunMessageSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class MockGunDomainViewset(viewsets.ViewSet):
+    def get(self, request, *args, **kwargs):
+        try:
+            domain = list(
+                MockGunDomain.objects.filter(name=self.kwargs["domain"])
+                .values(
+                    "created_at",
+                    "internal_id",
+                    "is_disabled",
+                    "name",
+                    "require_tls",
+                    "skip_verification",
+                    "smtp_login",
+                    "state",
+                    "type",
+                    "web_prefix",
+                    "web_scheme",
+                    "wildcard",
+                )
+                .values()
+            )[0]
+        except IndexError:
+            return JsonResponse({"message": "Domain does not exist"}, status=404)
+        domain["id"] = domain.pop("internal_id")
+        domain["created_at"] = domain.pop("created_at").strftime("%a, %d %b %Y %T UTC")
+        domain["receiving_dns_records"] = []
+        domain["sending_dns_records"] = []
+        return JsonResponse(domain)
 
     def list(self, request, *args, **kwargs):
-        domains = list(MockGunDomain.objects.all().values("created_at", "internal_id", "is_disabled", "name", "require_tls", "skip_verification", "smtp_login", "state", "type", "web_prefix", "web_scheme", "wildcard").values())
+        domains = list(
+            MockGunDomain.objects.all()
+            .values(
+                "created_at",
+                "internal_id",
+                "is_disabled",
+                "name",
+                "require_tls",
+                "skip_verification",
+                "smtp_login",
+                "state",
+                "type",
+                "web_prefix",
+                "web_scheme",
+                "wildcard",
+            )
+            .values()
+        )
         for domain in domains:
-            domain['id'] = domain.pop("internal_id")
-            domain['created_at'] = domain.pop("created_at").strftime("%a, %d %b %Y %T UTC")
+            domain["id"] = domain.pop("internal_id")
+            domain["created_at"] = domain.pop("created_at").strftime(
+                "%a, %d %b %Y %T UTC"
+            )
 
         return JsonResponse({"total_count": len(domains), "items": domains})
 
@@ -98,6 +144,7 @@ class DataImportExportView(viewsets.ViewSet):
             "main_app.MockGunDomain",
             "main_app.Template",
             "main_app.MockWebhook",
+            "main_app.TemplateVersion",
             stdout=out,
         )
         return HttpResponse(out.getvalue(), content_type="application/json")
