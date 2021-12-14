@@ -4,6 +4,7 @@ import base64
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login
+from django.shortcuts import redirect
 
 User = get_user_model()
 
@@ -19,6 +20,8 @@ def check_incoming_key(encoded):
 
 def auth_middleware(get_response):
     def middleware(request):
+        if request.path in ("", "/"):
+            return redirect("/admin/main_app/mockgunmessage/")
         auth_header = request.headers.get("Authorization")
         if request.path.startswith("/data"):
             return get_response(request)

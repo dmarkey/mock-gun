@@ -1,4 +1,5 @@
 #!/bin/sh
+python3 manage.py migrate
 if [ -f /data/fixtures.json ] ;
 then
     python3 manage.py loaddata /data/fixtures.json
