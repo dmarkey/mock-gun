@@ -23,9 +23,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-(d$_-lbxru*^q25p9z@l%p075dt@rniih4h)^g^0_gs)m4lvfm"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = strtobool(os.environ.get("DEBUG", "False"))
+DEBUG = bool(strtobool(os.environ.get("DEBUG", "False")))
 
 # Application definition
+SESSION_COOKIE_SECURE = bool(strtobool(
+    os.environ.get("SESSION_COOKIE_SECURE", "False")))
+
+CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+
+CSRF_TRUSTED_ORIGINS = [os.environ.get("MOCKGUN_FULL_HOST",
+                                       "http://localhost:8000")]
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",

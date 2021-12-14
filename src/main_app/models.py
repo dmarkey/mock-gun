@@ -117,8 +117,11 @@ class MockGunMessage(models.Model):
     raw_payload = models.JSONField()
     json_variables = models.JSONField()
 
-    def send_mock_webhooks(self):
-        for hook in self.domain.mockwebhook_set.all():
+    def send_mock_webhooks(self, enabled_only=True):
+        webhooks = self.domain.mockwebhook_set.all()
+        if enabled_only:
+            webhooks = webhooks.filter(enabled=True)
+        for hook in webhooks:
             hook.send_for_message(self)
 
     def __str__(self):
@@ -131,6 +134,7 @@ class MockWebhook(models.Model):
     url = models.URLField()
     domain = models.ForeignKey(MockGunDomain, on_delete=models.CASCADE)
     ssl_verify = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=True)
     webhook_type = models.CharField(
         max_length=128,
         choices=[
