@@ -28,3 +28,6 @@ class MockMessageAdmin(admin.ModelAdmin):
     formfield_overrides = {
         JSONField: {"widget": JSONEditorWidget},
     }
+    list_display = ["id", "created_at", "from_field",
+                    "subject", "template", "domain"]
+    list_filter = ["domain", "subject"]

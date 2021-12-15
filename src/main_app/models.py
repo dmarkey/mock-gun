@@ -103,6 +103,7 @@ class MockGunMessage(models.Model):
     from_field = models.ForeignKey(
         EmailAddress, related_name="from_field", on_delete=models.CASCADE
     )
+    created_at = models.DateTimeField(auto_now_add=True)
     cc = models.ManyToManyField(EmailAddress, related_name="cc", blank=True)
     bcc = models.ManyToManyField(EmailAddress, related_name="bcc", blank=True)
     subject = models.CharField(max_length=512)
