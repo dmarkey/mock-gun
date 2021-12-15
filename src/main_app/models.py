@@ -126,7 +126,7 @@ class MockGunMessage(models.Model):
             hook.send_for_message(self)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["created_at"]
 
     def __str__(self):
         to = ",".join(self.to.all().values_list("address", flat=True))
