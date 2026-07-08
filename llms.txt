@@ -1,0 +1,23 @@
+# mock-gun
+
+> Mailgun-compatible mock server for local/CI use. Accepts the same "send
+> message" API calls a real app would send to Mailgun, captures them instead
+> of delivering real email, and exposes a JSON introspection API so QA agents
+> and test frameworks can list, fetch, wait for, and clear captured messages
+> during a test run.
+
+## Docs
+
+- [API.md](API.md): full endpoint reference — auth, the Mailgun-compatible
+  send/domain/template endpoints, and the introspection API (list/get/wait/delete
+  messages) that QA agents and test frameworks should use to assert on
+  emails sent during tests.
+
+## Notes
+
+- All endpoints except `/admin` and `/data` require HTTP Basic auth: username
+  `api`, password is the `MOCK_MAILGUN_KEY` env var.
+- The introspection API is additive — it does not change the Mailgun-compatible
+  send/domain/template endpoints.
+- Base path for a running instance is whatever host:port it's deployed at
+  (e.g. `http://localhost:8000`); there is no fixed public URL.
