@@ -8,6 +8,12 @@ from django.db import models
 from main_app.webhook_templates import WEBHOOKS
 import requests
 
+# SQLite only ever allows one writer at a time; under the threaded dev
+# server, concurrent writes racing SQLite's own busy-timeout retry can
+# still surface spurious "database is locked" errors. Serializing writes
+# through this lock keeps that contention out of SQLite entirely, while
+# reads (list/retrieve/wait) remain fully concurrent.
+write_lock = threading.Lock()
 
 # Create your models here.
 

@@ -16,7 +16,20 @@ urlpatterns = [
         "v3/domains/<str:domain>",
         MockGunDomainViewset.as_view({"get": "get"}),
     ),
-    path("v3/<str:domain>/messages", MockGunMessageViewset.as_view({"post": "create"})),
+    path(
+        "v3/<str:domain>/messages",
+        MockGunMessageViewset.as_view(
+            {"post": "create", "get": "list", "delete": "clear"}
+        ),
+    ),
+    path(
+        "v3/<str:domain>/messages/wait",
+        MockGunMessageViewset.as_view({"get": "wait"}),
+    ),
+    path(
+        "v3/<str:domain>/messages/<uuid:message_id>",
+        MockGunMessageViewset.as_view({"get": "retrieve", "delete": "destroy"}),
+    ),
     path(
         "v3/<str:domain>/templates",
         TemplatesView.as_view({"post": "create", "get": "list"}),

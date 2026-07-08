@@ -1,4 +1,5 @@
 import copy
+import time
 from io import StringIO
 from urllib.parse import urlparse
 
@@ -9,14 +10,62 @@ from rest_framework import serializers, viewsets
 from rest_framework.exceptions import ValidationError
 from validate_email import validate_email
 from main_app.email_processing import process_incoming_email
-from main_app.models import MockGunDomain, MockGunMessage, Template, TemplateVersion
+from main_app.models import (
+    MockGunDomain,
+    MockGunMessage,
+    Template,
+    TemplateVersion,
+    write_lock,
+)
 from django.core.management import call_command
+
+# Cap on how long the wait endpoint may hold a connection open, so a
+# forgotten/misconfigured test can't tie up a server thread indefinitely.
+MAX_WAIT_TIMEOUT_SECONDS = 30
+WAIT_POLL_INTERVAL_SECONDS = 0.25
 
 
 class MockGunMessageSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = MockGunMessage
         fields = ["id"]
+
+
+def serialize_message(message, include_body=False):
+    data = {
+        "id": str(message.pk),
+        "created_at": message.created_at.strftime("%a, %d %b %Y %T UTC"),
+        "domain": message.domain_id,
+        "from": message.from_field.display_address or message.from_field.address,
+        "to": list(message.to.all().values_list("display_address", flat=True)),
+        "cc": list(message.cc.all().values_list("display_address", flat=True)),
+        "bcc": list(message.bcc.all().values_list("display_address", flat=True)),
+        "subject": message.subject,
+        "tag": message.tag,
+        "template": message.template.name if message.template_id else None,
+    }
+    if include_body:
+        data["text"] = message.text
+        data["html"] = message.html
+        data["json_variables"] = message.json_variables
+        data["raw_payload"] = message.raw_payload
+    return data
+
+
+def filter_messages(queryset, params):
+    to = params.get("to")
+    if to:
+        queryset = queryset.filter(to__address=to)
+    subject_contains = params.get("subject_contains")
+    if subject_contains:
+        queryset = queryset.filter(subject__icontains=subject_contains)
+    tag = params.get("tag")
+    if tag:
+        queryset = queryset.filter(tag=tag)
+    template = params.get("template")
+    if template:
+        queryset = queryset.filter(template__name=template)
+    return queryset.distinct()
 
 
 class MockGunDomainViewset(viewsets.ViewSet):
@@ -97,6 +146,95 @@ class MockGunMessageViewset(viewsets.ViewSet):
         return JsonResponse(
             {"message": "Queued. Thank you.", "id": f"<{message.pk}@{domain.name}>"}
         )
+
+    def list(self, request, *args, **kwargs):
+        """Introspection: list messages captured for a domain, for QA/test use."""
+        try:
+            domain = MockGunDomain.objects.get(name=self.kwargs["domain"])
+        except ObjectDoesNotExist:
+            return JsonResponse({"message": "Domain does not exist"}, status=404)
+
+        messages = filter_messages(
+            MockGunMessage.objects.filter(domain=domain), request.GET
+        ).order_by("-created_at")
+
+        limit = int(request.GET.get("limit", 50))
+        offset = int(request.GET.get("offset", 0))
+        total_count = messages.count()
+        items = [serialize_message(m) for m in messages[offset : offset + limit]]
+
+        return JsonResponse({"total_count": total_count, "items": items})
+
+    def retrieve(self, request, *args, **kwargs):
+        """Introspection: full body/headers of a single captured message."""
+        try:
+            domain = MockGunDomain.objects.get(name=self.kwargs["domain"])
+        except ObjectDoesNotExist:
+            return JsonResponse({"message": "Domain does not exist"}, status=404)
+        try:
+            message = MockGunMessage.objects.get(
+                domain=domain, pk=self.kwargs["message_id"]
+            )
+        except ObjectDoesNotExist:
+            return JsonResponse({"message": "Message does not exist"}, status=404)
+        return JsonResponse(serialize_message(message, include_body=True))
+
+    def destroy(self, request, *args, **kwargs):
+        """Introspection: delete a single captured message."""
+        try:
+            domain = MockGunDomain.objects.get(name=self.kwargs["domain"])
+        except ObjectDoesNotExist:
+            return JsonResponse({"message": "Domain does not exist"}, status=404)
+        with write_lock:
+            deleted, _ = MockGunMessage.objects.filter(
+                domain=domain, pk=self.kwargs["message_id"]
+            ).delete()
+        if not deleted:
+            return JsonResponse({"message": "Message does not exist"}, status=404)
+        return JsonResponse({"message": "deleted"})
+
+    def clear(self, request, *args, **kwargs):
+        """Introspection: wipe all captured messages for a domain (test teardown)."""
+        try:
+            domain = MockGunDomain.objects.get(name=self.kwargs["domain"])
+        except ObjectDoesNotExist:
+            return JsonResponse({"message": "Domain does not exist"}, status=404)
+        with write_lock:
+            queryset = MockGunMessage.objects.filter(domain=domain)
+            deleted = queryset.count()
+            queryset.delete()
+        return JsonResponse({"message": "cleared", "deleted": deleted})
+
+    def wait(self, request, *args, **kwargs):
+        """
+        Introspection: block until a message matching the given filters
+        (to/subject_contains/tag/template) arrives, or `timeout` seconds
+        elapse (default 10s, capped at MAX_WAIT_TIMEOUT_SECONDS). Lets test
+        frameworks assert on async email delivery without a client-side
+        poll loop.
+        """
+        try:
+            domain = MockGunDomain.objects.get(name=self.kwargs["domain"])
+        except ObjectDoesNotExist:
+            return JsonResponse({"message": "Domain does not exist"}, status=404)
+
+        timeout = min(
+            float(request.GET.get("timeout", 10)), MAX_WAIT_TIMEOUT_SECONDS
+        )
+        deadline = time.monotonic() + timeout
+
+        while True:
+            messages = filter_messages(
+                MockGunMessage.objects.filter(domain=domain), request.GET
+            ).order_by("-created_at")
+            message = messages.first()
+            if message:
+                return JsonResponse(serialize_message(message, include_body=True))
+            if time.monotonic() >= deadline:
+                return JsonResponse(
+                    {"message": "No matching message arrived in time"}, status=404
+                )
+            time.sleep(WAIT_POLL_INTERVAL_SECONDS)
 
 
 # Create your views here.

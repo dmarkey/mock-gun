@@ -2,7 +2,7 @@ from rest_framework.exceptions import ValidationError
 import email
 from validate_email import validate_email
 
-from main_app.models import EmailAddress, MockGunMessage, Template
+from main_app.models import EmailAddress, MockGunMessage, Template, write_lock
 
 
 def validate_all_emails(emails):
@@ -72,11 +72,6 @@ def process_incoming_email(payload, domain, json_variables):
     all_emails = to + bcc + cc + [from_field]
 
     validate_all_emails(all_emails)
-    from_addr = process_addresses([to])[0]
-    from_addr.display_address = from_field
-    to_objects = process_addresses(to_field)
-    cc_objects = process_addresses(cc)
-    bcc_objects = process_addresses(bcc)
     if not json_variables:
         json_variables = {}
 
@@ -99,18 +94,28 @@ def process_incoming_email(payload, domain, json_variables):
     else:
         subject = subject[0]
 
-    message = MockGunMessage()
-    message.html = html
-    message.raw_payload = payload
-    message.text = text
-    message.json_variables = json_variables
-    message.subject = subject
-    message.domain = domain
-    message.tag = tag
-    message.template = template_obj
-    message.from_field = from_addr
-    message.save()
-    message.to.set(to_objects)
-    message.bcc.set(bcc_objects)
-    message.cc.set(cc_objects)
+    # Serialize the whole write path: SQLite only allows one writer at a
+    # time, and letting concurrent requests race SQLite's own busy-timeout
+    # retry surfaces spurious "database is locked" errors under load.
+    with write_lock:
+        from_addr = process_addresses([from_field])[0]
+        from_addr.display_address = from_field
+        to_objects = process_addresses(to_field)
+        cc_objects = process_addresses(cc)
+        bcc_objects = process_addresses(bcc)
+
+        message = MockGunMessage()
+        message.html = html
+        message.raw_payload = payload
+        message.text = text
+        message.json_variables = json_variables
+        message.subject = subject
+        message.domain = domain
+        message.tag = tag
+        message.template = template_obj
+        message.from_field = from_addr
+        message.save()
+        message.to.set(to_objects)
+        message.bcc.set(bcc_objects)
+        message.cc.set(cc_objects)
     return message
